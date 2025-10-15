@@ -1,0 +1,108 @@
+﻿services:
+  # Ollama AI模型服務
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai-engine-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./models:/models
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_MAX_LOADED_MODELS=2
+      - OLLAMA_NUM_PARALLEL=4
+      - OLLAMA_FLASH_ATTENTION=1
+    networks:
+      - ai-engine-network
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # AI Engine 後端 (FastAPI)
+  ai-engine-backend:
+    build:
+      context: ./ai-engine
+      dockerfile: Dockerfile
+    container_name: ai-engine-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=qwen2.5:3b
+      - PYTHONIOENCODING=utf-8
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+    volumes:
+      - ./ai-engine/rag_store:/app/rag_store
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - ai-engine-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # AI Engine 前端 (Spring Boot)
+  ai-engine-frontend:
+    build:
+      context: ./ai-engine-frontend
+      dockerfile: Dockerfile
+    container_name: ai-engine-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ENGINE_BASE_URL=http://ai-engine-backend:8000
+      - JAVA_OPTS=-Xmx1g -Xms512m -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+    depends_on:
+      ai-engine-backend:
+        condition: service_healthy
+    networks:
+      - ai-engine-network
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 5 bash -c '</dev/tcp/localhost/8080' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # 初始化服務 - 下載和配置模型
+  model-init:
+    image: ollama/ollama:latest
+    container_name: ai-engine-model-init
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./scripts:/scripts
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - ai-engine-network
+    entrypoint: ["sh"]
+    command: ["/scripts/init-models.sh"]
+    restart: "no"
+
+volumes:
+  ollama_data:
+    driver: local
+
+networks:
+  ai-engine-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

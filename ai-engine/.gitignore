@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.env
+.venv/
+
+# VS Code
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Chroma DB
+chroma/
+
+# Local RAG store
+rag_store/
+
+# Poetry / Pip
+pip-wheel-metadata/
+*.egg-info/

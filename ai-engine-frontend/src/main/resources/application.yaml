@@ -1,0 +1,18 @@
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+engine:
+  base-url: http://127.0.0.1:8000
+spring:
+  thymeleaf:
+    cache: false
+    encoding: UTF-8
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true

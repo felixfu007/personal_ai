@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-Hant">
+<head>
+  <meta charset="UTF-8"/>
+  <title>個人 AI 引擎前端</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      margin: 0; 
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    .health {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 2rem;
+      height: calc(100vh - 120px);
+    }
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .chat-header {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-bottom: 1px solid #e9ecef;
+      font-weight: 600;
+      color: #495057;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      max-height: 400px;
+    }
+    .message {
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .message-user {
+      align-items: flex-end;
+    }
+    .message-assistant {
+      align-items: flex-start;
+    }
+    .message-bubble {
+      max-width: 80%;
+      padding: 0.75rem 1rem;
+      border-radius: 18px;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .user-bubble {
+      background: #007bff;
+      color: white;
+      border-bottom-right-radius: 6px;
+    }
+    .assistant-bubble {
+      background: #e9ecef;
+      color: #333;
+      border-bottom-left-radius: 6px;
+    }
+    .message-role {
+      font-size: 0.8rem;
+      color: #6c757d;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+    }
+    .chat-input {
+      padding: 1rem;
+      border-top: 1px solid #e9ecef;
+      background: #f8f9fa;
+    }
+    .input-group {
+      margin-bottom: 0.5rem;
+    }
+    .input-group label {
+      display: block;
+      font-size: 0.9rem;
+      color: #495057;
+      margin-bottom: 0.25rem;
+    }
+    .input-group input,
+    .input-group textarea,
+    .input-group select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      background: white;
+    }
+    .input-group textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    .button-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background-color 0.2s;
+    }
+    .btn-primary {
+      background: #007bff;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #0056b3;
+    }
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background: #545b62;
+    }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      margin: 0 0 1rem 0;
+      color: #495057;
+      font-size: 1.1rem;
+    }
+    .form-group {
+      margin-bottom: 0.75rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.9rem;
+      color: #495057;
+      margin-bottom: 0.25rem;
+    }
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+    }
+    .result {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 0.75rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+      white-space: pre-wrap;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .empty-chat {
+      text-align: center;
+      color: #6c757d;
+      font-style: italic;
+      padding: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🤖 個人 AI 引擎</h1>
+    <div class="health">系統狀態: <span th:text="${health ? '🟢 正常' : '🔴 異常'}"></span></div>
+  </div>
+
+  <div class="container">
+    <div class="chat-container">
+      <div class="chat-header">
+        💬 AI 聊天室
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div th:if="${#lists.isEmpty(history)}" class="empty-chat">
+          👋 歡迎使用 AI 聊天室！開始您的第一個對話吧...
+        </div>
+        <div th:each="m : ${history}" th:class="${m.get('role') == 'user'} ? 'message message-user' : 'message message-assistant'">
+          <div class="message-role" th:text="${m.get('role') == 'user'} ? '👤 您' : '🤖 AI助理'"></div>
+          <div th:class="${m.get('role') == 'user'} ? 'message-bubble user-bubble' : 'message-bubble assistant-bubble'" 
+               th:text="${m.get('content')}"></div>
+        </div>
+      </div>
+      <div class="chat-input">
+        <form method="post" action="/chat">
+          <div class="input-group">
+            <label>🎯 模型選擇：</label>
+            <select name="model" style="width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box; background: white;">
+              <option value="qwen2.5:3b" selected>🚀 qwen2.5:3b (快速中文模型 - 推薦)</option>
+              <option value="gemma2:2b">⚡ gemma2:2b (極速輕量模型)</option>
+              <option value="nomic-embed-text">🔍 nomic-embed-text (嵌入模型)</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label>💭 您的訊息：</label>
+            <textarea name="prompt" placeholder="請輸入您想要問的問題..." required></textarea>
+          </div>
+          <div class="button-group">
+            <button type="submit" class="btn btn-primary">📤 發送訊息</button>
+            <button type="submit" formaction="/chat/clear" class="btn btn-secondary">🗑️ 清除對話</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="card">
+        <h3>📚 RAG 知識庫管理</h3>
+        
+        <!-- 文本匯入 -->
+        <div style="margin-bottom: 1rem;">
+          <h4 style="margin: 0.5rem 0; font-size: 1rem; color: #495057;">📝 文本匯入</h4>
+          <form method="post" action="/rag/ingest">
+            <div class="form-group">
+              <label>🏷️ 命名空間：</label>
+              <input type="text" name="namespace" value="notes"/>
+            </div>
+            <div class="form-group">
+              <label>📝 文本內容（每行一段）：</label>
+              <textarea name="texts" placeholder="輸入要加入知識庫的文本內容..." rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">💾 匯入文本</button>
+          </form>
+        </div>
+
+        <!-- PDF 檔案上傳 -->
+        <div style="margin-bottom: 1rem; padding-top: 1rem; border-top: 1px solid #e9ecef;">
+          <h4 style="margin: 0.5rem 0; font-size: 1rem; color: #495057;">📄 PDF 檔案匯入</h4>
+          <form method="post" action="/rag/ingest/pdf" enctype="multipart/form-data">
+            <div class="form-group">
+              <label>🏷️ 命名空間：</label>
+              <input type="text" name="namespace" value="notes"/>
+            </div>
+            <div class="form-group">
+              <label>📄 選擇 PDF 檔案：</label>
+              <input type="file" name="file" accept=".pdf" required style="width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box; background: white;"/>
+            </div>
+            <button type="submit" class="btn btn-primary">📤 上傳 PDF</button>
+          </form>
+        </div>
+
+        <div th:if="${ingestResult}" class="result" th:text="${ingestResult}"></div>
+      </div>
+
+      <div class="card">
+        <h3>🔍 RAG 知識查詢</h3>
+        <form method="post" action="/rag/query">
+          <div class="form-group">
+            <label>🏷️ 命名空間：</label>
+            <input type="text" name="namespace" value="notes"/>
+          </div>
+          <div class="form-group">
+            <label>❓ 查詢問題：</label>
+            <input type="text" name="question" placeholder="輸入您的問題"/>
+          </div>
+          <div class="form-group">
+            <label>📊 返回結果數量：</label>
+            <input type="number" name="topK" value="3" min="1" max="10"/>
+          </div>
+          <button type="submit" class="btn btn-primary">🔍 搜尋答案</button>
+        </form>
+        <div th:if="${ragResult}" class="result" th:text="${ragResult}"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 自動滾動到最新訊息
+    function scrollToBottom() {
+      const chatMessages = document.getElementById('chatMessages');
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // 頁面載入完成後滾動到底部
+    window.addEventListener('load', function() {
+      scrollToBottom();
+    });
+    
+    // 表單提交後的處理
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+      form.addEventListener('submit', function() {
+        if (this.action.includes('/chat')) {
+          setTimeout(scrollToBottom, 100);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
